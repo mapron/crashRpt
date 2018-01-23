@@ -445,8 +445,8 @@ crSetCrashCallbackA(
 
 // Array indices for CR_INSTALL_INFO::uPriorities.
 #define CR_HTTP 0  //!< Send error report via HTTP (or HTTPS) connection.
-#define CR_SMTP 1  //!< Send error report via SMTP connection.
-#define CR_SMAPI 2 //!< Send error report via simple MAPI (using default mail client).
+//#define CR_SMTP 1  //!< Send error report via SMTP connection.
+//#define CR_SMAPI 2 //!< Send error report via simple MAPI (using default mail client).
 
 //! Special priority constant that allows to skip certain delivery method.
 #define CR_NEGATIVE_PRIORITY ((UINT)-1)

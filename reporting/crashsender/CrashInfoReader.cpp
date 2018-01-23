@@ -150,16 +150,6 @@ void CErrorReportInfo::SetDeliveryStatus(DELIVERY_STATUS status)
 	m_DeliveryStatus = status;
 }
 
-ScreenshotInfo& CErrorReportInfo::GetScreenshotInfo()
-{
-	return m_ScreenshotInfo;
-}
-
-void CErrorReportInfo::SetScreenshotInfo(ScreenshotInfo &si)
-{
-	m_ScreenshotInfo = si;
-}
-
 ULONG64 CErrorReportInfo::GetExceptionAddress()
 {
 	return m_dwExceptionAddress;
@@ -378,8 +368,6 @@ CCrashInfoReader::CCrashInfoReader()
 	m_bSendRecentReports = FALSE;
 	m_bAppRestart = FALSE;
 	m_uPriorities[CR_HTTP] = 3;
-	m_uPriorities[CR_SMTP] = 2;
-	m_uPriorities[CR_SMAPI] = 1;
 	m_bGenerateMinidump = TRUE;
 	m_MinidumpType = MiniDumpNormal;
 	m_bAddScreenshot = FALSE;

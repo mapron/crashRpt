@@ -15,9 +15,8 @@ be found in the Authors.txt file in the root of the source tree.
 
 #include "stdafx.h"
 #include "resource.h"
-#include "ErrorReportDlg.h"
-#include "ResendDlg.h"
 #include "CrashInfoReader.h"
+#include "ErrorReportSender.h"
 #include "strconv.h"
 #include "Utility.h"
 
@@ -26,8 +25,6 @@ CAppModule _Module;             // WTL's application module.
 int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int /*nCmdShow*/ = SW_SHOWDEFAULT)
 { 
 	int nRet = 0; // Return code
-	CErrorReportDlg dlgErrorReport; // Error Report dialog
-	CResendDlg dlgResend; // Resend dialog
 
 	// Get command line parameters.
 	LPCWSTR szCommandLine = GetCommandLineW();
@@ -70,27 +67,6 @@ int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int /*nCmdShow*/ = SW_SHOWDEFAULT)
 		// Create message loop.
 		CMessageLoop theLoop;
 		_Module.AddMessageLoop(&theLoop);
-
-		if(!pSender->GetCrashInfo()->m_bSendRecentReports)
-		{
-			// Create "Error Report" dialog			
-			if(dlgErrorReport.Create(NULL) == NULL)
-			{
-				ATLTRACE(_T("Error report dialog creation failed!\n"));
-				delete pSender;
-				return 1;
-			}			
-		}
-		else
-		{        
-			// Create "Send Error Reports" dialog.					
-			if(dlgResend.Create(NULL) == NULL)
-			{
-				ATLTRACE(_T("Resend dialog creation failed!\n"));
-				delete pSender;
-				return 1;
-			}			
-		}
 
 		// Process window messages.
 		nRet = theLoop.Run();	    

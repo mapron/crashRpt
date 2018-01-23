@@ -10,21 +10,15 @@ be found in the Authors.txt file in the root of the source tree.
 
 #include "stdafx.h"
 #include "ErrorReportSender.h"
-#include "MailMsg.h"
-#include "smtpclient.h"
-#include "HttpRequestSender.h"
 #include "CrashRpt.h"
 #include "md5.h"
 #include "Utility.h"
 #include "zip.h"
 #include "CrashInfoReader.h"
 #include "strconv.h"
-#include "ScreenCap.h"
 #include "base64.h"
 #include <sys/stat.h>
 #include "dbghelp.h"
-#include "VideoRec.h"
-#include "VideoRecDlg.h"
 
 CErrorReportSender* CErrorReportSender::m_pInstance = NULL;
 
@@ -76,40 +70,6 @@ BOOL CErrorReportSender::Init(LPCTSTR szFileMappingName)
 		// Set Right-to-Left reading order
         SetProcessDefaultLayout(LAYOUT_RTL);  
     }
-	
-	// Determine whether to record video
-	if(GetCrashInfo()->m_bAddVideo)
-	{
-		// The following enters the video recording loop
-		// and returns when the parent process signals the event.
-		BOOL bRec = RecordVideo();		
-		if(!bRec)
-		{
-			// Clean up temp files
-			m_VideoRec.Destroy();
-			return FALSE;
-		}
-
-		// Reread crash information from the file mapping object.
-		int nInit = m_CrashInfo.Init(szFileMappingName);
-		if(nInit!=0)
-		{
-			m_sErrorMsg.Format(_T("Error reading crash info: %s"), m_CrashInfo.GetErrorMsg().GetBuffer(0));
-			return FALSE;
-		}
-
-		// Check if the client app has crashed or exited successfully.
-		if(!m_CrashInfo.m_bClientAppCrashed)
-		{
-			// Let the parent process to continue its work
-			UnblockParentProcess();
-
-			// Clean up temp files
-			m_VideoRec.Destroy();
-
-			return FALSE;
-		}
-	}
 	
     if(!m_CrashInfo.m_bSendRecentReports)
     {
@@ -328,10 +288,7 @@ BOOL CErrorReportSender::DoWork(int Action)
     {
         // Add a message to log
         m_Assync.SetProgress(_T("Start collecting information about the crash..."), 0, false);
-
-        // First take a screenshot of user's desktop (if needed).
-        TakeDesktopScreenshot();
-
+       
         if(m_Assync.IsCancelled()) // Check if user-cancelled
         {      
             // Parent process can now terminate
@@ -368,17 +325,7 @@ BOOL CErrorReportSender::DoWork(int Action)
             m_Assync.SetProgress(_T("[exit_silently]"), 0, false);
             return FALSE;
         }
-
-		// Encode recorded video to an .OGG file
-		EncodeVideo();
 		
-		if(m_Assync.IsCancelled()) // Check if user-cancelled
-        {      
-            // Add a message to log
-            m_Assync.SetProgress(_T("[exit_silently]"), 0, false);
-            return FALSE;
-        }
-
 		// Create crash description XML
 		CreateCrashDescriptionXML(*m_CrashInfo.GetReport(0));
 	
@@ -476,83 +423,6 @@ BOOL CErrorReportSender::Finalize()
     }
 
     // Done OK
-    return TRUE;
-}
-
-// This method takes the desktop screenshot (screenshot of entire virtual screen
-// or screenshot of the main window). 
-BOOL CErrorReportSender::TakeDesktopScreenshot()
-{
-    CScreenCapture sc; // Screen capture object
-    ScreenshotInfo ssi; // Screenshot params    
-
-    // Add a message to log
-    m_Assync.SetProgress(_T("[taking_screenshot]"), 0);    
-
-    // Check if screenshot capture is allowed
-    if(!m_CrashInfo.m_bAddScreenshot)
-    {
-        // Add a message to log
-        m_Assync.SetProgress(_T("Desktop screenshot generation disabled; skipping."), 0);    
-        // Exit, nothing to do here
-        return TRUE;
-    }
-
-    // Add a message to log
-    m_Assync.SetProgress(_T("Taking desktop screenshot"), 0);    
-
-    // Get screenshot flags passed by the parent process
-    DWORD dwFlags = m_CrashInfo.m_dwScreenshotFlags;
-
-	BOOL bAllowDelete = (dwFlags&CR_AS_ALLOW_DELETE)!=0;
-
-    // Determine what image format to use (JPG or PNG)
-    SCREENSHOT_IMAGE_FORMAT fmt = SCREENSHOT_FORMAT_PNG; // PNG by default
-
-    if((dwFlags&CR_AS_USE_JPEG_FORMAT)!=0)
-        fmt = SCREENSHOT_FORMAT_JPG; // Use JPEG format
-
-    // Determine what to use - color or grayscale image
-    BOOL bGrayscale = (dwFlags&CR_AS_GRAYSCALE_IMAGE)!=0;
-
-	SCREENSHOT_TYPE type = SCREENSHOT_TYPE_VIRTUAL_SCREEN;
-    if((dwFlags&CR_AS_MAIN_WINDOW)!=0) // We need to capture the main window
-		type = SCREENSHOT_TYPE_MAIN_WINDOW;
-    else if((dwFlags&CR_AS_PROCESS_WINDOWS)!=0) // Capture all process windows
-		type = SCREENSHOT_TYPE_ALL_PROCESS_WINDOWS;
-    else // (dwFlags&CR_AS_VIRTUAL_SCREEN)!=0 // Capture the virtual screen
-		type = SCREENSHOT_TYPE_VIRTUAL_SCREEN;
-    
-    // Take the screen shot
-    BOOL bTakeScreenshot = sc.TakeDesktopScreenshot(		
-        m_CrashInfo.GetReport(m_nCurReport)->GetErrorReportDirName(), 
-		ssi, type, m_CrashInfo.m_dwProcessId, fmt, m_CrashInfo.m_nJpegQuality, bGrayscale);
-    if(bTakeScreenshot==FALSE)
-    {
-        return FALSE;
-    }
-
-	// Save screenshot info
-    m_CrashInfo.GetReport(0)->SetScreenshotInfo(ssi);
-
-    // Prepare the list of screenshot files we will add to the error report
-    std::vector<ERIFileItem> FilesToAdd;
-    size_t i;
-	for(i=0; i<ssi.m_aMonitors.size(); i++)
-    {
-		CString sFileName = ssi.m_aMonitors[i].m_sFileName;
-        CString sDestFile;
-        int nSlashPos = sFileName.ReverseFind('\\');
-        sDestFile = sFileName.Mid(nSlashPos+1);
-        ERIFileItem fi;
-        fi.m_sSrcFile = sFileName;
-        fi.m_sDestFile = sDestFile;		
-        fi.m_sDesc = Utility::GetINIString(m_CrashInfo.m_sLangFileName, _T("DetailDlg"), _T("DescScreenshot")); 		
-		fi.m_bAllowDelete = bAllowDelete;
-        m_CrashInfo.GetReport(0)->AddFileItem(&fi);
-    }
-
-    // Done
     return TRUE;
 }
 
@@ -965,80 +835,7 @@ BOOL CErrorReportSender::CreateCrashDescriptionXML(CErrorReportInfo& eri)
 
     AddElemToXML(_T("MemoryUsageKbytes"), eri.GetMemUsage(), root);
 
-    if(eri.GetScreenshotInfo().m_bValid)
-    {
-        TiXmlHandle hScreenshotInfo = new TiXmlElement("ScreenshotInfo");
-        root->LinkEndChild(hScreenshotInfo.ToNode());
-
-        TiXmlHandle hVirtualScreen = new TiXmlElement("VirtualScreen");    
-
-        sNum.Format(_T("%d"), eri.GetScreenshotInfo().m_rcVirtualScreen.left);
-        hVirtualScreen.ToElement()->SetAttribute("left", strconv.t2utf8(sNum));
-
-        sNum.Format(_T("%d"), eri.GetScreenshotInfo().m_rcVirtualScreen.top);
-        hVirtualScreen.ToElement()->SetAttribute("top", strconv.t2utf8(sNum));
-
-        sNum.Format(_T("%d"), eri.GetScreenshotInfo().m_rcVirtualScreen.Width());
-        hVirtualScreen.ToElement()->SetAttribute("width", strconv.t2utf8(sNum));
-
-        sNum.Format(_T("%d"), eri.GetScreenshotInfo().m_rcVirtualScreen.Height());
-        hVirtualScreen.ToElement()->SetAttribute("height", strconv.t2utf8(sNum));
-
-        hScreenshotInfo.ToNode()->LinkEndChild(hVirtualScreen.ToNode());
-
-        TiXmlHandle hMonitors = new TiXmlElement("Monitors");
-        hScreenshotInfo.ToElement()->LinkEndChild(hMonitors.ToNode());                  
-
-        size_t i;
-        for(i=0; i<eri.GetScreenshotInfo().m_aMonitors.size(); i++)
-        { 
-            MonitorInfo& mi = eri.GetScreenshotInfo().m_aMonitors[i];      
-            TiXmlHandle hMonitor = new TiXmlElement("Monitor");
-
-            sNum.Format(_T("%d"), mi.m_rcMonitor.left);
-            hMonitor.ToElement()->SetAttribute("left", strconv.t2utf8(sNum));
-
-            sNum.Format(_T("%d"), mi.m_rcMonitor.top);
-            hMonitor.ToElement()->SetAttribute("top", strconv.t2utf8(sNum));
-
-            sNum.Format(_T("%d"), mi.m_rcMonitor.Width());
-            hMonitor.ToElement()->SetAttribute("width", strconv.t2utf8(sNum));
-
-            sNum.Format(_T("%d"), mi.m_rcMonitor.Height());
-            hMonitor.ToElement()->SetAttribute("height", strconv.t2utf8(sNum));
-
-            hMonitor.ToElement()->SetAttribute("file", strconv.t2utf8(Utility::GetFileName(mi.m_sFileName)));
-
-            hMonitors.ToElement()->LinkEndChild(hMonitor.ToNode());                  
-        }
-
-        TiXmlHandle hWindows = new TiXmlElement("Windows");
-        hScreenshotInfo.ToElement()->LinkEndChild(hWindows.ToNode());                  
-
-        for(i=0; i<eri.GetScreenshotInfo().m_aWindows.size(); i++)
-        { 
-            WindowInfo& wi = eri.GetScreenshotInfo().m_aWindows[i];      
-            TiXmlHandle hWindow = new TiXmlElement("Window");
-
-            sNum.Format(_T("%d"), wi.m_rcWnd.left);
-            hWindow.ToElement()->SetAttribute("left", strconv.t2utf8(sNum));
-
-            sNum.Format(_T("%d"), wi.m_rcWnd.top);
-            hWindow.ToElement()->SetAttribute("top", strconv.t2utf8(sNum));
-
-            sNum.Format(_T("%d"), wi.m_rcWnd.Width());
-            hWindow.ToElement()->SetAttribute("width", strconv.t2utf8(sNum));
-
-            sNum.Format(_T("%d"), wi.m_rcWnd.Height());
-            hWindow.ToElement()->SetAttribute("height", strconv.t2utf8(sNum));
-
-            hWindow.ToElement()->SetAttribute("title", strconv.t2utf8(wi.m_sTitle));
-
-            hWindows.ToElement()->LinkEndChild(hWindow.ToNode());                  
-        }
-    }
-
-    TiXmlHandle hCustomProps = new TiXmlElement("CustomProps");
+	TiXmlHandle hCustomProps = new TiXmlElement("CustomProps");
     root->LinkEndChild(hCustomProps.ToNode());
 
 	int i;
@@ -2020,13 +1817,7 @@ BOOL CErrorReportSender::SendReport()
 	// Arrange priorities in reverse order
     std::multimap<int, int> order;
 
-    std::pair<int, int> pair3(m_CrashInfo.m_uPriorities[CR_SMAPI], CR_SMAPI);
-    order.insert(pair3);
-
-    std::pair<int, int> pair2(m_CrashInfo.m_uPriorities[CR_SMTP], CR_SMTP);
-    order.insert(pair2);
-
-    std::pair<int, int> pair1(m_CrashInfo.m_uPriorities[CR_HTTP], CR_HTTP);
+	std::pair<int, int> pair1(m_CrashInfo.m_uPriorities[CR_HTTP], CR_HTTP);
     order.insert(pair1);
 
     std::multimap<int, int>::reverse_iterator rit;
@@ -2046,23 +1837,11 @@ BOOL CErrorReportSender::SendReport()
 
 		// Send the report
         if(id==CR_HTTP)
-            bResult = SendOverHTTP();    
-        else if(id==CR_SMTP)
-            bResult = SendOverSMTP();  
-        else if(id==CR_SMAPI)
-            bResult = SendOverSMAPI();
-
+            bResult = SendOverHTTP();  
+    
 		// Check if this attempt has failed
         if(bResult==FALSE)
             continue;
-
-		// If currently sending through Simple MAPI, do not wait for completion
-        if(id==CR_SMAPI && bResult==TRUE)
-        {
-            status = 0;
-            break;
-        }
-
 		// else wait for completion
         if(0==m_Assync.WaitForCompletion())
         {
@@ -2210,244 +1989,6 @@ int CErrorReportSender::Base64EncodeAttachment(CString sFileName,
 
     // OK.
     return 0;
-}
-
-// This method formats the E-mail message text
-CString CErrorReportSender::FormatEmailText()
-{
-    CString sFileTitle = m_sZipName;
-    sFileTitle.Replace('/', '\\');
-    int pos = sFileTitle.ReverseFind('\\');
-    if(pos>=0)
-        sFileTitle = sFileTitle.Mid(pos+1);
-
-    CString sText;
-
-    sText += _T("This is the error report from ") + m_CrashInfo.m_sAppName + 
-        _T(" ") + m_CrashInfo.GetReport(m_nCurReport)->GetAppVersion()+_T(".\n\n");
-
-    if(!m_CrashInfo.GetReport(m_nCurReport)->GetEmailFrom().IsEmpty())
-    {
-        sText += _T("This error report was sent by ") + m_CrashInfo.GetReport(m_nCurReport)->GetEmailFrom() + _T(".\n");
-        sText += _T("If you need additional info about the problem, you may want to contact this user again.\n\n");
-    }     
-
-    if(!m_CrashInfo.GetReport(m_nCurReport)->GetProblemDescription().IsEmpty())
-    {
-        sText += _T("The user has provided the following problem description:\n<<< ") + 
-            m_CrashInfo.GetReport(m_nCurReport)->GetProblemDescription() + _T(" >>>\n\n");    
-    }
-
-    sText += _T("You may find detailed information about the error in files attached to this message:\n\n");
-    sText += sFileTitle + _T(" is a ZIP archive which contains crash description XML (crashrpt.xml), crash minidump (crashdump.dmp) ");
-    sText += _T("and possibly other files that your application added to the crash report.\n\n");
-
-    sText += sFileTitle + _T(".md5 file contains MD5 hash for the ZIP archive. You might want to use this file to check integrity of the error report.\n\n");
-
-    sText += _T("For additional information, see FAQ http://code.google.com/p/crashrpt/wiki/FAQ\n");
-
-    return sText;
-}
-
-// This method sends the report over SMTP 
-BOOL CErrorReportSender::SendOverSMTP()
-{  
-	strconv_t strconv;
-
-	// Check our config - should we send the report over SMTP or not?
-    if(m_CrashInfo.m_uPriorities[CR_SMTP]==CR_NEGATIVE_PRIORITY)
-    {
-        m_Assync.SetProgress(_T("Sending error report over SMTP is disabled (negative priority); skipping."), 0);
-        return FALSE;
-    }
-
-	// Check recipient's email
-    if(m_CrashInfo.m_sEmailTo.IsEmpty())
-    {
-        m_Assync.SetProgress(_T("No E-mail address is specified for sending error report over SMTP; skipping."), 0);
-        return FALSE;
-    }
-
-	// Fill in email fields
-    // If the sender is not defined, use the first e-mail address from the recipient list.
-	if (m_CrashInfo.GetReport(m_nCurReport)->GetEmailFrom().IsEmpty()) 
-	{
-		// Force a copy of the string. Simple assignment just references the data of g_CrashInfo.m_sEmailTo. 
-		// The copy string will be modified by strtok.
-		CString copy((LPCTSTR)m_CrashInfo.m_sEmailTo, m_CrashInfo.m_sEmailTo.GetLength());
-		TCHAR   separators[] = _T(";, ");
-		TCHAR  *context		 = 0;
-		TCHAR  *to			 = _tcstok_s(const_cast<LPTSTR>((LPCTSTR)copy), separators, &context);
-		m_EmailMsg.SetSenderAddress((to == 0 || *to == 0) ? m_CrashInfo.m_sEmailTo : to);
-	} 
-	else
-		m_EmailMsg.SetSenderAddress(m_CrashInfo.GetReport(m_nCurReport)->GetEmailFrom());
-	m_EmailMsg.AddRecipients(m_CrashInfo.m_sEmailTo);    
-	m_EmailMsg.SetSubject(m_CrashInfo.m_sEmailSubject);
-
-    if(m_CrashInfo.m_sEmailText.IsEmpty())
-        m_EmailMsg.SetText(FormatEmailText());
-    else
-        m_EmailMsg.SetText(m_CrashInfo.m_sEmailText);
-
-	m_EmailMsg.AddAttachment(m_sZipName);  
-
-    // Create and attach MD5 hash file
-    CString sErrorRptHash;
-    CalcFileMD5Hash(m_sZipName, sErrorRptHash);
-    CString sFileTitle = m_sZipName;
-    sFileTitle.Replace('/', '\\');
-    int pos = sFileTitle.ReverseFind('\\');
-    if(pos>=0)
-        sFileTitle = sFileTitle.Mid(pos+1);
-    sFileTitle += _T(".md5");
-    CString sTempDir;
-    Utility::getTempDirectory(sTempDir);
-    CString sTmpFileName = sTempDir +_T("\\")+ sFileTitle;
-    FILE* f = NULL;
-    _TFOPEN_S(f, sTmpFileName, _T("wt"));
-    if(f!=NULL)
-    {   
-        LPCSTR szErrorRptHash = strconv.t2a(sErrorRptHash.GetBuffer(0));
-        fwrite(szErrorRptHash, strlen(szErrorRptHash), 1, f);
-        fclose(f);
-        m_EmailMsg.AddAttachment(sTmpFileName);  
-    }
-
-    // Set SMTP proxy server (if specified)
-    if ( !m_CrashInfo.m_sSmtpProxyServer.IsEmpty())
-        m_SmtpClient.SetSmtpServer( m_CrashInfo.m_sSmtpProxyServer, m_CrashInfo.m_nSmtpProxyPort);
-
-	// Set SMTP login and password
-	m_SmtpClient.SetAuthParams(m_CrashInfo.m_sSmtpLogin, m_CrashInfo.m_sSmtpPassword);
-
-    // Send mail assynchronously
-    int res = m_SmtpClient.SendEmailAssync(&m_EmailMsg, &m_Assync); 
-    return (res==0);
-}
-
-// This method sends the report over Simple MAPI
-BOOL CErrorReportSender::SendOverSMAPI()
-{  
-    strconv_t strconv;
-
-	// Check our config - should we send the report over Simple MAPI or not?
-    if(m_CrashInfo.m_uPriorities[CR_SMAPI]==CR_NEGATIVE_PRIORITY)
-    {
-        m_Assync.SetProgress(_T("Sending error report over SMAPI is disabled (negative priority); skipping."), 0);
-        return FALSE;
-    }
-
-	// Check recipient's email address
-    if(m_CrashInfo.m_sEmailTo.IsEmpty())
-    {
-        m_Assync.SetProgress(_T("No E-mail address is specified for sending error report over Simple MAPI; skipping."), 0);
-        return FALSE;
-    }
-
-	// Do not send if we are in silent mode
-    if(m_CrashInfo.m_bSilentMode)
-    {
-        m_Assync.SetProgress(_T("Simple MAPI may require user interaction (not acceptable for non-GUI mode); skipping."), 0);
-        return FALSE;
-    }
-
-	// Update progress
-    m_Assync.SetProgress(_T("Sending error report using Simple MAPI"), 0, false);
-    m_Assync.SetProgress(_T("Initializing MAPI"), 1);
-
-	// Initialize MAPI
-    BOOL bMAPIInit = m_MapiSender.MAPIInitialize();
-    if(!bMAPIInit)
-    {
-        m_Assync.SetProgress(m_MapiSender.GetLastErrorMsg(), 100, false);
-        return FALSE;
-    }
-
-	// Request user confirmation
-    if(m_SendAttempt!=0 && m_MailClientConfirm==NOT_CONFIRMED_YET)
-    {
-        m_Assync.SetProgress(_T("[confirm_launch_email_client]"), 0);
-        int confirm = 1;
-        m_Assync.WaitForFeedback(confirm);
-        if(confirm!=0)
-        {
-			m_MailClientConfirm = NOT_ALLOWED;
-            m_Assync.SetProgress(_T("Cancelled by user"), 100, false);
-            return FALSE;
-        }
-		else
-		{
-			m_MailClientConfirm = ALLOWED;
-		}
-    }
-
-	if(m_MailClientConfirm != ALLOWED)
-	{
-		m_Assync.SetProgress(_T("Not allowed to launch E-mail client."), 100, false);
-		return FALSE;
-	}
-
-	// Detect mail client (Microsoft Outlook, Mozilla Thunderbird and so on)
-    CString msg;
-    CString sMailClientName;
-    m_MapiSender.DetectMailClient(sMailClientName);
-
-	msg.Format(_T("Launching the default email client (%s)"), sMailClientName);
-    m_Assync.SetProgress(msg, 10);
-
-	// Fill in email fields
-    m_MapiSender.SetFrom(m_CrashInfo.GetReport(m_nCurReport)->GetEmailFrom());
-	
-	// The copy string will be modified by strtok.
-	CString copy		 = m_CrashInfo.m_sEmailTo;
-	TCHAR   separators[] = _T(";, ");
-	TCHAR  *context		 = 0;
-	TCHAR  *to			 = _tcstok_s(const_cast<LPTSTR>((LPCTSTR)copy), separators, &context);	
-	while (to != 0) 
-	{
-		m_MapiSender.AddRecipient(_T("SMTP:")+CString(to));
-		to=_tcstok_s(NULL, separators, &context);		
-	};    
-
-    m_MapiSender.SetSubject(m_CrashInfo.m_sEmailSubject);
-    CString sFileTitle = m_sZipName;
-    sFileTitle.Replace('/', '\\');
-    int pos = sFileTitle.ReverseFind('\\');
-    if(pos>=0)
-        sFileTitle = sFileTitle.Mid(pos+1);
-
-    if(m_CrashInfo.m_sEmailText.IsEmpty())
-        m_MapiSender.SetMessage(FormatEmailText());
-    else
-        m_MapiSender.SetMessage(m_CrashInfo.m_sEmailText);
-    m_MapiSender.AddAttachment(m_sZipName, sFileTitle);
-
-    // Create and attach MD5 hash file
-    CString sErrorRptHash;
-    CalcFileMD5Hash(m_sZipName, sErrorRptHash);
-    sFileTitle += _T(".md5");
-    CString sTempDir;
-    Utility::getTempDirectory(sTempDir);
-    CString sTmpFileName = sTempDir +_T("\\")+ sFileTitle;
-    FILE* f = NULL;
-    _TFOPEN_S(f, sTmpFileName, _T("wt"));
-    if(f!=NULL)
-    { 
-        LPCSTR szErrorRptHash = strconv.t2a(sErrorRptHash.GetBuffer(0));
-        fwrite(szErrorRptHash, strlen(szErrorRptHash), 1, f);
-        fclose(f);
-        m_MapiSender.AddAttachment(sTmpFileName, sFileTitle);  
-    }
-
-	// Send email
-    BOOL bSend = m_MapiSender.Send();
-    if(!bSend)
-        m_Assync.SetProgress(m_MapiSender.GetLastErrorMsg(), 100, false);
-    else
-        m_Assync.SetProgress(_T("Sent OK"), 100, false);
-
-    return bSend;
 }
 
 CString CErrorReportSender::GetLangStr(LPCTSTR szSection, LPCTSTR szName)
@@ -2628,144 +2169,4 @@ int CErrorReportSender::TerminateAllCrashSenderProcesses()
 
     return 0;
 }
-
-BOOL CErrorReportSender::RecordVideo()
-{	
-	// The following method enters the video recording loop
-	// and returns when the parent process signals the event.
-
-	DWORD dwFlags = m_CrashInfo.m_dwVideoFlags;	  
-
-	// Show notification dialog
-	if((dwFlags & CR_AV_NO_GUI) == 0)
-	{
-		CVideoRecDlg dlg;
-		INT_PTR res = dlg.DoModal(
-			IsWindow(m_CrashInfo.m_hWndVideoParent)?m_CrashInfo.m_hWndVideoParent:NULL);
-		if(res!=IDOK)
-			return FALSE;
-	}
-
-    // Determine screenshot type.
-    SCREENSHOT_TYPE type = SCREENSHOT_TYPE_VIRTUAL_SCREEN;
-    if((dwFlags&CR_AV_MAIN_WINDOW)!=0) // We need to capture the main window
-		type = SCREENSHOT_TYPE_MAIN_WINDOW;
-    else if((dwFlags&CR_AV_PROCESS_WINDOWS)!=0) // Capture all process windows
-		type = SCREENSHOT_TYPE_ALL_PROCESS_WINDOWS;
-    else // (dwFlags&CR_AV_VIRTUAL_SCREEN)!=0 // Capture the virtual screen
-		type = SCREENSHOT_TYPE_VIRTUAL_SCREEN;
-
-	// Determine what encoding quality to use
-	int quality = 10;
-	if((dwFlags&CR_AV_QUALITY_GOOD)!=0)
-		quality = 40;
-	else if((dwFlags&CR_AV_QUALITY_BEST)!=0)
-		quality = 63;
-	
-	// Add a message to log
-	CString sMsg;
-	sMsg.Format(_T("Start video recording."));
-	m_Assync.SetProgress(sMsg, 0, false);
-
-	// Open the event we will use for synchronization with the parent process
-	CString sEventName;
-    sEventName.Format(_T("Local\\CrashRptEvent_%s_2"), GetCrashInfo()->GetReport(0)->GetCrashGUID());
-    HANDLE hEvent = CreateEvent(NULL, FALSE, FALSE, sEventName);
-	if(hEvent==NULL)
-	{
-		// Add a message to log
-		sMsg.Format(_T("Error opening event."));
-		m_Assync.SetProgress(sMsg, 0, false);
-		return FALSE;
-	}
-    
-	// Init video recorder object
-	if(!m_VideoRec.Init(m_CrashInfo.GetReport(0)->GetErrorReportDirName(),
-				type, m_CrashInfo.m_dwProcessId, m_CrashInfo.m_nVideoDuration,
-				m_CrashInfo.m_nVideoFrameInterval,
-				quality, &m_CrashInfo.m_DesiredFrameSize))
-	{
-		// Add a message to log
-		sMsg.Format(_T("Error initializing video recorder."));
-		m_Assync.SetProgress(sMsg, 0, false);
-		return FALSE;
-	}
-
-	// Video recording loop.
-	for(;;)
-	{
-		// Wait for a while
-		BOOL bExitLoop = WAIT_OBJECT_0==WaitForSingleObject(hEvent, m_CrashInfo.m_nVideoFrameInterval);
-
-		// This will record a single BMP file
-		m_VideoRec.RecordVideoFrame();
-
-		if(bExitLoop)
-			break; // Event is signaled; break the loop
-					
-		// Check if the client app is still alive
-		HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, m_CrashInfo.m_dwProcessId);
-		if(hProcess==NULL)
-			return FALSE; // Process seems to be terminated!
-
-		// If process handle is still accessible, check its exit code
-		DWORD dwExitCode = 1;
-		if(GetExitCodeProcess(hProcess, &dwExitCode) && dwExitCode!=STILL_ACTIVE)
-		{
-			CloseHandle(hProcess);
-			return FALSE; // Process seems to exit!
-		}
-
-		CloseHandle(hProcess);
-	}
-
-	// Add a message to log
-	sMsg.Format(_T("Video recording completed."));
-	m_Assync.SetProgress(sMsg, 0, false);
-
-	// Return TRUE to indicate video recording completed successfully.
-	return TRUE;
-}
-
-BOOL CErrorReportSender::EncodeVideo()
-{
-	// Add a message to log
-    m_Assync.SetProgress(_T("[encoding_video]"), 0);    
-
-    // Check if video capture is allowed
-    if(!m_VideoRec.IsInitialized())
-    {
-        // Add a message to log
-        m_Assync.SetProgress(_T("Desktop video recording disabled; skipping."), 0);    
-        // Exit, nothing to do here
-        return TRUE;
-    }
-	
-	 // Add a message to log
-    m_Assync.SetProgress(_T("Encoding recorded video, please wait..."), 1);    
-	
-	// Encode recorded video to a webm file
-	if(!m_VideoRec.EncodeVideo())
-	{
-		// Add a message to log
-		m_Assync.SetProgress(_T("Error encoding video."), 100, false);    
-		return FALSE;
-	}
-
-	bool bAllowDelete = (m_CrashInfo.m_dwVideoFlags&CR_AV_ALLOW_DELETE)!=0;
-
-	// Add file to crash report
-	ERIFileItem fi;
-	fi.m_sSrcFile = m_VideoRec.GetOutFile();
-	fi.m_sDestFile = Utility::GetFileName(fi.m_sSrcFile);
-    fi.m_sDesc = Utility::GetINIString(m_CrashInfo.m_sLangFileName, _T("DetailDlg"), _T("DescVideo"));  
-	fi.m_bAllowDelete = bAllowDelete;
-    m_CrashInfo.GetReport(0)->AddFileItem(&fi);
-
-	// Add a message to log
-    m_Assync.SetProgress(_T("Finished encoding video."), 100, false);    
-
-	return TRUE;
-}
-
 

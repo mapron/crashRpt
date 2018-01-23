@@ -10,12 +10,9 @@ be found in the Authors.txt file in the root of the source tree.
 
 #pragma once
 #include "AssyncNotification.h"
-#include "MailMsg.h"
-#include "smtpclient.h"
 #include "HttpRequestSender.h"
 #include "tinyxml.h"
 #include "CrashInfoReader.h"
-#include "VideoRec.h"
 
 // Action type
 enum ActionType  
@@ -138,15 +135,6 @@ private:
     // Calculates MD5 hash for a file.
     int CalcFileMD5Hash(CString sFileName, CString& sMD5Hash);
 	    
-    // Takes desktop screenshot.
-    BOOL TakeDesktopScreenshot();
-
-	// This method enters the video recording loop.
-	BOOL RecordVideo();
-
-	// Writes video to a webm file
-	BOOL EncodeVideo();
-
     // Creates crash dump file.
     BOOL CreateMiniDump();  
 
@@ -191,15 +179,6 @@ private:
     // Encodes attachment file with Base-64 encoding.
     int Base64EncodeAttachment(CString sFileName, std::string& sEncodedFileData);
 
-    // Formats Email text.
-    CString FormatEmailText();
-
-    // Sends error report over SMTP.
-    BOOL SendOverSMTP();
-
-    // Sends error report over Simple MAPI.
-    BOOL SendOverSMAPI();
-
 	// Sends all recently queued error reports in turn.
 	BOOL SendRecentReports();
 
@@ -209,18 +188,14 @@ private:
 	// Internal variables
 	static CErrorReportSender* m_pInstance; // Singleton
 	CCrashInfoReader m_CrashInfo;       // Contains crash information.
-	CVideoRecorder m_VideoRec;            // Video recorder.
 	CString m_sErrorMsg;                // Last error message.
 	HWND m_hWndNotify;                  // Notification window.
     int m_nStatus;                      // Error report sending status.
     int m_nCurReport;                   // Index of current error report.
     HANDLE m_hThread;                   // Handle to the worker thread.
     int m_SendAttempt;                  // Number of current sending attempt.
-    AssyncNotification m_Assync;        // Used for communication with the main thread.
-    CEmailMessage m_EmailMsg;           // Email message to send.
-    CSmtpClient m_SmtpClient;           // Used to send report over SMTP.
+    AssyncNotification m_Assync;        // Used for communication with the main thread. 
     CHttpRequestSender m_HttpSender;    // Used to send report over HTTP.
-    CMailMsg m_MapiSender;              // Used to send report over SMAPI.
     CString m_sZipName;                 // Name of the ZIP archive to send.
     int m_Action;                       // Current assynchronous action.
     BOOL m_bExport;                     // If TRUE than export should be performed.

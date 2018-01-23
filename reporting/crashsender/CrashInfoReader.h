@@ -17,7 +17,6 @@ be found in the Authors.txt file in the root of the source tree.
 #include "stdafx.h"
 #include "tinyxml.h"
 #include "SharedMem.h"
-#include "ScreenCap.h"
 
 // The structure describing a file item contained in crash report.
 struct ERIFileItem
@@ -184,12 +183,6 @@ public:
 
 	// Sets delivery status.
 	void SetDeliveryStatus(DELIVERY_STATUS status);
-
-	// Returns desktop screenshot parameters
-	ScreenshotInfo& GetScreenshotInfo();
-
-	// Sets desktop screenshot parameters.
-	void SetScreenshotInfo(ScreenshotInfo &si);
 			
 private:
 	
@@ -216,7 +209,7 @@ private:
     CString         m_sOSName;             // Operating system friendly name.
     BOOL            m_bOSIs64Bit;          // Is operating system 64-bit?
     CString         m_sGeoLocation;        // Geographic location.
-    ScreenshotInfo  m_ScreenshotInfo;      // Screenshot info.
+    //ScreenshotInfo  m_ScreenshotInfo;      // Screenshot info.
 	ULONG64         m_uTotalSize;          // Summary size of this (uncompressed) report.
     BOOL            m_bSelected;           // Is this report selected for delivery or not?
     DELIVERY_STATUS m_DeliveryStatus;      // Error report delivery status.

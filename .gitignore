@@ -1,0 +1,15 @@
+*Debug*
+*Release*
+/build*
+*.user
+*.lib
+*.obj
+*.sdf
+*.suo
+*.ilk
+*.pdb
+*.exe
+*.dll
+*.bsc
+*.exp
+*.ipch

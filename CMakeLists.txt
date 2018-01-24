@@ -120,12 +120,12 @@ else(CMAKE_CL_64)
 endif(CMAKE_CL_64)
 
 add_subdirectory("thirdparty/tinyxml")
-add_subdirectory("thirdparty/jpeg")
-add_subdirectory("thirdparty/libpng")
+#add_subdirectory("thirdparty/jpeg")
+#add_subdirectory("thirdparty/libpng")
 add_subdirectory("thirdparty/minizip")
 add_subdirectory("thirdparty/zlib")
-add_subdirectory("thirdparty/libogg")
-add_subdirectory("thirdparty/libtheora")
+#add_subdirectory("thirdparty/libogg")
+#add_subdirectory("thirdparty/libtheora")
 
 
 

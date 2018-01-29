@@ -11,8 +11,12 @@ be found in the Authors.txt file in the root of the source tree.
 #pragma once
 #include "AssyncNotification.h"
 #include "HttpRequestSender.h"
-#include "tinyxml.h"
+//#include "tinyxml.h"
 #include "CrashInfoReader.h"
+
+#include "crashsender_export.h"
+
+class TiXmlNode;
 
 // Action type
 enum ActionType  
@@ -39,7 +43,7 @@ enum eMailClientConfirm
 
 // The main class that collects crash report files, packs them 
 // into a ZIP archive and sends the error report.
-class CErrorReportSender
+class CRASHSENDER_EXPORT CErrorReportSender
 {
 public:
 

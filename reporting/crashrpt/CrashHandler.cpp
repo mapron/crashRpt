@@ -292,9 +292,9 @@ int CCrashHandler::Init(
     CString sCrashSenderName;
 
 #ifdef _DEBUG
-    sCrashSenderName.Format(_T("CrashSender%dd.exe"), CRASHRPT_VER);
+    sCrashSenderName.Format(_T("CrashSenderApp.exe"), CRASHRPT_VER);
 #else
-    sCrashSenderName.Format(_T("CrashSender%d.exe"), CRASHRPT_VER);
+    sCrashSenderName.Format(_T("CrashSenderApp.exe"), CRASHRPT_VER);
 #endif //_DEBUG
 
     // Check that CrashSender.exe file exists

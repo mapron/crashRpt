@@ -10,7 +10,6 @@ list(REMOVE_ITEM srcs_using_precomp ./stdafx.cpp ./md5.cpp ./base64.cpp)
 add_msvc_precompiled_header(stdafx.h ./stdafx.cpp srcs_using_precomp)
 
 list(APPEND source_files	
-	./CrashSender.rc 
 	${CMAKE_SOURCE_DIR}/reporting/CrashRpt/Utility.cpp 
 	${CMAKE_SOURCE_DIR}/reporting/CrashRpt/SharedMem.cpp)
 	
@@ -18,6 +17,8 @@ list(APPEND source_files
 add_definitions(-D_UNICODE )
 
 fix_default_compiler_settings_()
+include(GenerateExportHeader)
+include_directories( ${CMAKE_BINARY_DIR} )
 
 # Add include dir
 include_directories( ${CMAKE_SOURCE_DIR}/include 
@@ -39,7 +40,8 @@ else(NOT CMAKE_CL_64)
 endif(NOT CMAKE_CL_64)
 
 # Add executable build target
-add_executable(CrashSender WIN32 ${source_files} ${header_files})
+add_library(CrashSender SHARED ${source_files} ${header_files})
+generate_export_header(CrashSender EXPORT_FILE_NAME ${CMAKE_BINARY_DIR}/crashsender_export.h )
 
 # Add input link libraries
 target_link_libraries(CrashSender zlib tinyxml minizip WS2_32.lib Dnsapi.lib wininet.lib Rpcrt4.lib Gdi32.lib shell32.lib Comdlg32.lib version.lib psapi.lib)
@@ -50,6 +52,4 @@ set_target_properties(CrashRpt PROPERTIES COMPILE_FLAGS "/Os")
 #	set_target_properties(CrashRpt PROPERTIES COMPILE_FLAGS "/MP")
 #endif(${MSVC_VERSION} GREATER 1310)
 
-set_target_properties(CrashSender PROPERTIES 
-				DEBUG_POSTFIX ${CRASHRPT_VER}d
-				RELEASE_POSTFIX ${CRASHRPT_VER} )
+set_target_properties(CrashSender PROPERTIES DEBUG_POSTFIX d)

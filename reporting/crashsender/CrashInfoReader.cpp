@@ -393,6 +393,12 @@ CCrashInfoReader::CCrashInfoReader()
 	m_uFPESubcode = 0;
 	m_uInvParamLine = 0;
 	m_pCrashDesc = NULL;
+	m_SharedMem.reset(new CSharedMem());
+}
+
+CCrashInfoReader::~CCrashInfoReader()
+{
+	 
 }
 
 int CCrashInfoReader::Init(LPCTSTR szFileMappingName)
@@ -404,10 +410,10 @@ int CCrashInfoReader::Init(LPCTSTR szFileMappingName)
     CErrorReportInfo eri;
 
 	// Init shared memory
-	if(!m_SharedMem.IsInitialized())
+	if(!m_SharedMem->IsInitialized())
 	{
 		// Init shared memory
-		BOOL bInitMem = m_SharedMem.Init(szFileMappingName, TRUE, 0);
+		BOOL bInitMem = m_SharedMem->Init(szFileMappingName, TRUE, 0);
 		if(!bInitMem)
 		{
 			m_sErrorMsg = _T("Error initializing shared memory.");
@@ -416,7 +422,7 @@ int CCrashInfoReader::Init(LPCTSTR szFileMappingName)
 	}
 
 	// Unpack crash description from shared memory
-    m_pCrashDesc = (CRASH_DESCRIPTION*)m_SharedMem.CreateView(0, sizeof(CRASH_DESCRIPTION));
+    m_pCrashDesc = (CRASH_DESCRIPTION*)m_SharedMem->CreateView(0, sizeof(CRASH_DESCRIPTION));
 
     int nUnpack = UnpackCrashDescription(eri);
     if(0!=nUnpack)
@@ -563,13 +569,13 @@ int CCrashInfoReader::UnpackCrashDescription(CErrorReportInfo& eri)
     DWORD dwOffs = m_pCrashDesc->m_wSize;
     while(dwOffs<m_pCrashDesc->m_dwTotalSize)
     {
-        LPBYTE pView = m_SharedMem.CreateView(dwOffs, sizeof(GENERIC_HEADER));
+        LPBYTE pView = m_SharedMem->CreateView(dwOffs, sizeof(GENERIC_HEADER));
         GENERIC_HEADER* pHeader = (GENERIC_HEADER*)pView;
 
         if(memcmp(pHeader->m_uchMagic, "FIL", 3)==0)
         {
             // File item entry
-            FILE_ITEM* pFileItem = (FILE_ITEM*)m_SharedMem.CreateView(dwOffs, pHeader->m_wSize);
+            FILE_ITEM* pFileItem = (FILE_ITEM*)m_SharedMem->CreateView(dwOffs, pHeader->m_wSize);
 
             ERIFileItem fi;
             UnpackString(pFileItem->m_dwSrcFilePathOffs, fi.m_sSrcFile);
@@ -580,12 +586,12 @@ int CCrashInfoReader::UnpackCrashDescription(CErrorReportInfo& eri)
 
             eri.m_FileItems[fi.m_sDestFile] = fi;
 
-            m_SharedMem.DestroyView((LPBYTE)pFileItem);
+            m_SharedMem->DestroyView((LPBYTE)pFileItem);
         }
         else if(memcmp(pHeader->m_uchMagic, "CPR",3 )==0)
         {
             // Custom prop entry
-            CUSTOM_PROP* pProp = (CUSTOM_PROP*)m_SharedMem.CreateView(dwOffs, pHeader->m_wSize);
+            CUSTOM_PROP* pProp = (CUSTOM_PROP*)m_SharedMem->CreateView(dwOffs, pHeader->m_wSize);
 
             CString sName;
             CString sValue;
@@ -594,12 +600,12 @@ int CCrashInfoReader::UnpackCrashDescription(CErrorReportInfo& eri)
 
             eri.m_Props[sName] = sValue;
 
-            m_SharedMem.DestroyView((LPBYTE)pProp);
+            m_SharedMem->DestroyView((LPBYTE)pProp);
         }
         else if(memcmp(pHeader->m_uchMagic, "REG", 3)==0)
         {
             // Reg key entry
-            REG_KEY* pKey = (REG_KEY*)m_SharedMem.CreateView(dwOffs, pHeader->m_wSize);
+            REG_KEY* pKey = (REG_KEY*)m_SharedMem->CreateView(dwOffs, pHeader->m_wSize);
 
             CString sKeyName;
             ERIRegKey rki;
@@ -609,7 +615,7 @@ int CCrashInfoReader::UnpackCrashDescription(CErrorReportInfo& eri)
 
             eri.m_RegKeys[sKeyName] = rki;
 
-            m_SharedMem.DestroyView((LPBYTE)pKey);
+            m_SharedMem->DestroyView((LPBYTE)pKey);
         }
         else if(memcmp(pHeader->m_uchMagic, "STR", 3)==0)
         {
@@ -623,7 +629,7 @@ int CCrashInfoReader::UnpackCrashDescription(CErrorReportInfo& eri)
 
         dwOffs += pHeader->m_wSize;
 
-        m_SharedMem.DestroyView(pView);
+        m_SharedMem->DestroyView(pView);
     }
 	    
     // Success
@@ -632,7 +638,7 @@ int CCrashInfoReader::UnpackCrashDescription(CErrorReportInfo& eri)
 
 int CCrashInfoReader::UnpackString(DWORD dwOffset, CString& str)
 {
-    STRING_DESC* pStrDesc = (STRING_DESC*)m_SharedMem.CreateView(dwOffset, sizeof(STRING_DESC));
+    STRING_DESC* pStrDesc = (STRING_DESC*)m_SharedMem->CreateView(dwOffset, sizeof(STRING_DESC));
     if(memcmp(pStrDesc, "STR", 3)!=0)
         return 1;
 
@@ -642,10 +648,10 @@ int CCrashInfoReader::UnpackString(DWORD dwOffset, CString& str)
 
     WORD wStrLen = wLength-sizeof(STRING_DESC);
 
-    m_SharedMem.DestroyView((LPBYTE)pStrDesc);
-    LPBYTE pStrData = m_SharedMem.CreateView(dwOffset+sizeof(STRING_DESC), wStrLen);
+    m_SharedMem->DestroyView((LPBYTE)pStrDesc);
+    LPBYTE pStrData = m_SharedMem->CreateView(dwOffset+sizeof(STRING_DESC), wStrLen);
     str = CString((LPCTSTR)pStrData, wStrLen/sizeof(TCHAR));
-    m_SharedMem.DestroyView(pStrData);
+    m_SharedMem->DestroyView(pStrData);
 
     return 0;
 }

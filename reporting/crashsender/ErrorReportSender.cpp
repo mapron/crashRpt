@@ -17,6 +17,7 @@ be found in the Authors.txt file in the root of the source tree.
 #include "CrashInfoReader.h"
 #include "strconv.h"
 #include "base64.h"
+#include "tinyxml.h"
 #include <sys/stat.h>
 #include "dbghelp.h"
 
@@ -592,9 +593,10 @@ BOOL CErrorReportSender::CreateMiniDump()
         CompiledApiVer.Reserved = 0;
         LPAPI_VERSION pActualApiVer = lpImagehlpApiVersionEx(&CompiledApiVer);    
         pActualApiVer;
+		//_ASSERT_EXPR(CompiledApiVer.MinorVersion==pActualApiVer->MinorVersion, std::to_wstring(pActualApiVer->MinorVersion).c_str());
         ATLASSERT(CompiledApiVer.MajorVersion==pActualApiVer->MajorVersion);
-        ATLASSERT(CompiledApiVer.MinorVersion==pActualApiVer->MinorVersion);
-        ATLASSERT(CompiledApiVer.Revision==pActualApiVer->Revision);    
+        //ATLASSERT(CompiledApiVer.MinorVersion==pActualApiVer->MinorVersion);
+        //ATLASSERT(CompiledApiVer.Revision==pActualApiVer->Revision);    
     }
 
     // Write minidump to the file

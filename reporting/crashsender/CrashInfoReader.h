@@ -15,9 +15,14 @@ be found in the Authors.txt file in the root of the source tree.
 
 #pragma once
 #include "stdafx.h"
-#include "tinyxml.h"
-#include "SharedMem.h"
+//#include "SharedMem.h"
+#include <memory>
 
+class TiXmlHandle;
+class TiXmlElement;
+
+class CSharedMem;
+struct CRASH_DESCRIPTION;
 // The structure describing a file item contained in crash report.
 struct ERIFileItem
 {
@@ -293,6 +298,8 @@ public:
 	// Constructor
 	CCrashInfoReader();
 	
+	~CCrashInfoReader();
+	
     // Gets crash info from shared memory.
     int Init(LPCTSTR szFileMappingName);
 
@@ -373,7 +380,7 @@ private:
 
     std::vector<CErrorReportInfo> m_Reports; // Array of error reports.   
     CString m_sINIFile;                     // Path to ~CrashRpt.ini file.
-    CSharedMem m_SharedMem;                 // Shared memory
+    std::unique_ptr<CSharedMem> m_SharedMem;                 // Shared memory
     CRASH_DESCRIPTION* m_pCrashDesc;        // Pointer to crash descritpion
 	CString m_sErrorMsg;                    // Last error message.
 };

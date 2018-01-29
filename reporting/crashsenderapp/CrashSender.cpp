@@ -17,8 +17,8 @@ be found in the Authors.txt file in the root of the source tree.
 #include "resource.h"
 #include "CrashInfoReader.h"
 #include "ErrorReportSender.h"
-#include "strconv.h"
-#include "Utility.h"
+//#include "strconv.h"
+//#include "Utility.h"
 
 CAppModule _Module;             // WTL's application module.
 

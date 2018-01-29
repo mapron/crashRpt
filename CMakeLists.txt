@@ -99,16 +99,17 @@ endmacro()
 # Other CMakeLists are located in project subdirectories
 
 add_subdirectory("demos/ConsoleDemo")
-add_subdirectory("demos/WTLDemo")
-add_subdirectory("demos/MFCDemo")
+#add_subdirectory("demos/WTLDemo")
+#add_subdirectory("demos/MFCDemo")
 
 add_subdirectory("reporting/crashrpt")
 add_subdirectory("reporting/crashsender")
+add_subdirectory("reporting/crashsenderapp")
 
-add_subdirectory("processing/crashrptprobe")
-add_subdirectory("processing/crprober")
+#add_subdirectory("processing/crashrptprobe")
+#add_subdirectory("processing/crprober")
 
-add_subdirectory("tests")
+#add_subdirectory("tests")
 
 # Set output directory for LIB files
 if(CMAKE_CL_64)

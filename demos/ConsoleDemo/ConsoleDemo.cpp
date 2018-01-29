@@ -42,8 +42,8 @@ int main(int argc, char* argv[])
     info.cb = sizeof(CR_INSTALL_INFO);  
     info.pszAppName = _T("ConsoleDemo"); // Define application name.
     info.pszAppVersion = _T("1.3.1");     // Define application version.
-    info.pszEmailSubject = _T("ConsoleDemo Error Report"); // Define subject for email.
-    info.pszEmailTo = _T("test@hotmail.com");   // Define E-mail recipient address.  
+    //info.pszEmailSubject = _T("ConsoleDemo Error Report"); // Define subject for email.
+    //info.pszEmailTo = _T("test@hotmail.com");   // Define E-mail recipient address.  
 	//info.pszSmtpProxy = _T("127.0.0.1");  // Use SMTP proxy.
 	//info.pszSmtpLogin = _T("test");      // SMTP Login
 	//info.pszSmtpPassword = _T("test");       // SMTP Password
@@ -68,12 +68,12 @@ int main(int argc, char* argv[])
     info.pszDebugHelpDLL = NULL;                    // Search for dbghelp.dll using default search sequence.
     info.uMiniDumpType = MiniDumpNormal;            // Define minidump size.
     // Define privacy policy URL.
-    info.pszPrivacyPolicyURL = _T("http://code.google.com/p/crashrpt/wiki/PrivacyPolicyTemplate");
-    info.pszErrorReportSaveDir = NULL;       // Save error reports to the default location.
-    info.pszRestartCmdLine = _T("/restart"); // Command line for automatic app restart.
+    //info.pszPrivacyPolicyURL = _T("http://code.google.com/p/crashrpt/wiki/PrivacyPolicyTemplate");
+    //info.pszErrorReportSaveDir = NULL;       // Save error reports to the default location.
+    //info.pszRestartCmdLine = _T("/restart"); // Command line for automatic app restart.
     //info.pszLangFilePath = _T("D:\\");       // Specify custom dir or filename for language file.
     //info.pszCustomSenderIcon = _T("C:\\WINDOWS\\System32\\user32.dll, 1"); // Specify custom icon for CrashRpt dialogs.
-	info.nRestartTimeout = 50;
+	//info.nRestartTimeout = 50;
     // Install crash handlers
     int nInstResult = crInstall(&info);            
     assert(nInstResult==0);

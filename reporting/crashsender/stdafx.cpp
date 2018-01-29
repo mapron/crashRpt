@@ -11,7 +11,7 @@ be found in the Authors.txt file in the root of the source tree.
 //	testapp.pch will be the pre-compiled header
 //	stdafx.obj will contain the pre-compiled type information
 
-#include "stdafx.h"
+#include "commonInclude.h"
 
 #if (_ATL_VER < 0x0700)
 #include <atlimpl.cpp>

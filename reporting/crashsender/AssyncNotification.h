@@ -14,7 +14,7 @@ be found in the Authors.txt file in the root of the source tree.
 // Date: 2009
 
 #pragma once
-#include "stdafx.h"
+#include "commonInclude.h"
 
 struct AssyncNotification
 {

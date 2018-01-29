@@ -31,3 +31,4 @@ add_executable(CrashSenderApp WIN32 ${source_files} ${header_files})
 # Add input link libraries
 target_link_libraries(CrashSenderApp CrashSender)
 
+set_target_properties(CrashSenderApp PROPERTIES DEBUG_POSTFIX D)

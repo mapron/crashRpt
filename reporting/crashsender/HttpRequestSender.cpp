@@ -8,7 +8,7 @@ tree. All contributing project authors may
 be found in the Authors.txt file in the root of the source tree.
 ***************************************************************************************/
 
-#include "stdafx.h"
+#include "commonInclude.h"
 #include "HttpRequestSender.h"
 #include "base64.h"
 #include "md5.h"

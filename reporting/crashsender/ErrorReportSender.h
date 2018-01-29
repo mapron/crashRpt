@@ -11,10 +11,26 @@ be found in the Authors.txt file in the root of the source tree.
 #pragma once
 #include "AssyncNotification.h"
 #include "HttpRequestSender.h"
-//#include "tinyxml.h"
 #include "CrashInfoReader.h"
 
-#include "crashsender_export.h"
+#ifdef CRASHSENDER_STATIC_DEFINE
+#  define CRASHSENDER_EXPORT
+#  define CRASHSENDER_NO_EXPORT
+#else
+#  ifndef CRASHSENDER_EXPORT
+#    ifdef CrashSender_EXPORTS
+        /* We are building this library */
+#      define CRASHSENDER_EXPORT __declspec(dllexport)
+#    else
+        /* We are using this library */
+#      define CRASHSENDER_EXPORT __declspec(dllimport)
+#    endif
+#  endif
+
+#  ifndef CRASHSENDER_NO_EXPORT
+#    define CRASHSENDER_NO_EXPORT 
+#  endif
+#endif
 
 class TiXmlNode;
 

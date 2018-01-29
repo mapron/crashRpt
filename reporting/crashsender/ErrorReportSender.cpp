@@ -8,7 +8,7 @@ tree. All contributing project authors may
 be found in the Authors.txt file in the root of the source tree.
 ***************************************************************************************/
 
-#include "stdafx.h"
+#include "commonInclude.h"
 #include "ErrorReportSender.h"
 #include "CrashRpt.h"
 #include "md5.h"
@@ -65,12 +65,12 @@ BOOL CErrorReportSender::Init(LPCTSTR szFileMappingName)
     }
 		
 	// Check window mirroring settings 
-    CString sRTL = Utility::GetINIString(m_CrashInfo.m_sLangFileName, _T("Settings"), _T("RTLReading"));
+    /*CString sRTL = Utility::GetINIString(m_CrashInfo.m_sLangFileName, _T("Settings"), _T("RTLReading"));
     if(sRTL.CompareNoCase(_T("1"))==0)
     {
 		// Set Right-to-Left reading order
         SetProcessDefaultLayout(LAYOUT_RTL);  
-    }
+    }*/
 	
     if(!m_CrashInfo.m_bSendRecentReports)
     {
@@ -594,7 +594,7 @@ BOOL CErrorReportSender::CreateMiniDump()
         LPAPI_VERSION pActualApiVer = lpImagehlpApiVersionEx(&CompiledApiVer);    
         pActualApiVer;
 		//_ASSERT_EXPR(CompiledApiVer.MinorVersion==pActualApiVer->MinorVersion, std::to_wstring(pActualApiVer->MinorVersion).c_str());
-        ATLASSERT(CompiledApiVer.MajorVersion==pActualApiVer->MajorVersion);
+        ATLASSERT(CompiledApiVer.MajorVersion<=pActualApiVer->MajorVersion);
         //ATLASSERT(CompiledApiVer.MinorVersion==pActualApiVer->MinorVersion);
         //ATLASSERT(CompiledApiVer.Revision==pActualApiVer->Revision);    
     }
@@ -668,7 +668,7 @@ cleanup:
 
 	// Add the minidump file to error report
     fi.m_bMakeCopy = false;
-    fi.m_sDesc = Utility::GetINIString(m_CrashInfo.m_sLangFileName, _T("DetailDlg"), _T("DescCrashDump"));
+    fi.m_sDesc = _T("DescCrashDump");
     fi.m_sDestFile = _T("crashdump.dmp");
     fi.m_sSrcFile = sMinidumpFile;
     fi.m_sErrorStatus = sErrorMsg;
@@ -761,7 +761,7 @@ BOOL CErrorReportSender::CreateCrashDescriptionXML(CErrorReportInfo& eri)
     CString sExceptionType;
 
     fi.m_bMakeCopy = false;
-    fi.m_sDesc = Utility::GetINIString(m_CrashInfo.m_sLangFileName, _T("DetailDlg"), _T("DescXML"));
+    fi.m_sDesc = _T("DescXML");
     fi.m_sDestFile = _T("crashrpt.xml");
     fi.m_sSrcFile = sFileName;
     fi.m_sErrorStatus = sErrorMsg;  
@@ -999,7 +999,7 @@ BOOL CErrorReportSender::CollectCrashFiles()
         ERIFileItem fi;
         fi.m_sSrcFile = sFilePath;
 		fi.m_sDestFile = rki.m_sDstFileName;
-        fi.m_sDesc = Utility::GetINIString(m_CrashInfo.m_sLangFileName, _T("DetailDlg"), _T("DescRegKey"));
+        fi.m_sDesc = _T("DescRegKey");
         fi.m_bMakeCopy = FALSE;
 		fi.m_bAllowDelete = rki.m_bAllowDelete;
         fi.m_sErrorStatus = sErrorMsg;

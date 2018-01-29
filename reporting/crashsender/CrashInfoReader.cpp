@@ -13,7 +13,7 @@ be found in the Authors.txt file in the root of the source tree.
 // Authors: zexspectrum
 // Date: 2010
 
-#include "stdafx.h"
+#include "commonInclude.h"
 #include "CrashRpt.h"
 #include "CrashInfoReader.h"
 #include "strconv.h"

@@ -292,7 +292,7 @@ int CCrashHandler::Init(
     CString sCrashSenderName;
 
 #ifdef _DEBUG
-    sCrashSenderName.Format(_T("CrashSenderApp.exe"), CRASHRPT_VER);
+    sCrashSenderName.Format(_T("CrashSenderAppD.exe"), CRASHRPT_VER);
 #else
     sCrashSenderName.Format(_T("CrashSenderApp.exe"), CRASHRPT_VER);
 #endif //_DEBUG
@@ -328,13 +328,13 @@ int CCrashHandler::Init(
     m_sPathToCrashSender += sCrashSenderName;
 
 	// Check if lang file exists on disk
-    CString sLangFileVer = Utility::GetINIString(m_sLangFileName, _T("Settings"), _T("CrashRptVersion"));
+   /* CString sLangFileVer = Utility::GetINIString(m_sLangFileName, _T("Settings"), _T("CrashRptVersion"));
     int lang_file_ver = _ttoi(sLangFileVer);
     if(lang_file_ver!=CRASHRPT_VER)
     {    
         crSetErrorMsg(_T("Missing language file or wrong language file version."));
         return 1; // Language INI file has wrong version!
-    }
+    }*/
 
 	// If path to dbghelp.dll not provided, use the default one
     if(lpcszDebugHelpDLLPath==NULL)

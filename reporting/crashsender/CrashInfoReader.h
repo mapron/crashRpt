@@ -14,8 +14,8 @@ be found in the Authors.txt file in the root of the source tree.
 // Date: 2010
 
 #pragma once
-#include "stdafx.h"
-//#include "SharedMem.h"
+#include "commonInclude.h"
+
 #include <memory>
 
 class TiXmlHandle;

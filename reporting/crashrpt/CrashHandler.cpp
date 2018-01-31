@@ -1611,8 +1611,7 @@ int CCrashHandler::LaunchCrashSender(LPCTSTR szCmdLineParams, BOOL bWait, HANDLE
     {
         /* Wait until CrashSender finishes with making screenshot, 
         copying files, creating minidump. */  
-
-        WaitForSingleObject(m_hEvent, INFINITE);  
+        WaitForSingleObject(pi.hProcess, INFINITE);  
     }
 
     // Return handle to the CrashSender.exe process.    

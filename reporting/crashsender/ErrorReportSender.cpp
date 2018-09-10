@@ -946,7 +946,15 @@ BOOL CErrorReportSender::CollectCrashFiles()
 	for(i=0; i<(int)file_list.size(); i++)
 	{
 		m_CrashInfo.GetReport(0)->AddFileItem(&file_list[i]);
-	}				
+	}	
+	for (const auto & filename : m_additionalFiles)
+	{
+		ERIFileItem fi;
+        fi.m_sSrcFile = filename.fullpath.c_str();
+		fi.m_sDestFile = filename.shortname.c_str();
+        fi.m_sDesc = filename.shortname.c_str();
+		m_CrashInfo.GetReport(0)->AddFileItem(&fi);
+	}
 
 	// Remove file items that are search patterns
 	BOOL bFound = FALSE;

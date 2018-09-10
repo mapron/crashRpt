@@ -52,6 +52,12 @@ enum eMailClientConfirm
     NOT_ALLOWED        // User didn't allow mail client launch
 };
 
+struct UserFile
+{
+	std::wstring fullpath;
+	std::wstring shortname;
+};
+
 // Messages sent to GUI buy the sender
 #define WM_NEXT_ITEM_HINT      (WM_USER+1023)
 #define WM_ITEM_STATUS_CHANGED (WM_USER+1024)
@@ -128,6 +134,8 @@ public:
 	
 	// This method finds and terminates all instances of CrashSender.exe process.
 	static int TerminateAllCrashSenderProcesses();
+	
+	void AddFile(UserFile filename) { m_additionalFiles.emplace_back(std::move(filename)); }
 		
 private:
 
@@ -224,6 +232,7 @@ private:
     BOOL m_bSendingNow;                 // TRUE if in progress of sending reports.
 	BOOL m_bErrors;                     // TRUE if there were errors.
 	CString m_sCrashLogFile;            // Log file.
+	std::vector<UserFile> m_additionalFiles;
 };
 
 

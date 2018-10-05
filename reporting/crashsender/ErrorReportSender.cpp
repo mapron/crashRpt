@@ -781,7 +781,12 @@ BOOL CErrorReportSender::CreateCrashDescriptionXML(CErrorReportInfo& eri)
     AddElemToXML(_T("AppVersion"), eri.GetAppVersion(), root);  
     AddElemToXML(_T("ImageName"), eri.GetImageName(), root);
     AddElemToXML(_T("OperatingSystem"), eri.GetOSName(), root);
-
+	
+	if (const char *username = getenv("USERNAME"))
+		AddElemToXML(_T("UserName"), username, root);
+	
+	if (const char *computername = getenv("COMPUTERNAME"))
+		AddElemToXML(_T("HostName"), computername, root);
 
     sOSIs64Bit.Format(_T("%d"), eri.IsOS64Bit());
     AddElemToXML(_T("OSIs64Bit"), sOSIs64Bit, root);

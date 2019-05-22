@@ -190,5 +190,17 @@ void AssyncNotification::FeedbackReady(int code)
     m_cs.Lock();
     m_nCompletionStatus = code;
     m_cs.Unlock();
-    SetEvent(m_hFeedbackEvent);      
+	SetEvent(m_hFeedbackEvent);      
+}
+
+void AssyncNotification::SetHttpResponse(const std::string & data)
+{
+	m_cs.Lock(); // Acquire lock
+    m_httpResponse = data;
+	m_cs.Unlock(); // Free lock
+}
+
+const std::string & AssyncNotification::GetHttpResponse() const
+{
+	return m_httpResponse;	
 }

@@ -787,6 +787,9 @@ BOOL CErrorReportSender::CreateCrashDescriptionXML(CErrorReportInfo& eri)
 	
 	if (const char *computername = getenv("COMPUTERNAME"))
 		AddElemToXML(_T("HostName"), computername, root);
+	
+	for (const auto & pair : m_additionalParams)
+		AddElemToXML(pair.first.c_str(), pair.second.c_str(), root);
 
     sOSIs64Bit.Format(_T("%d"), eri.IsOS64Bit());
     AddElemToXML(_T("OSIs64Bit"), sOSIs64Bit, root);
@@ -1894,7 +1897,8 @@ BOOL CErrorReportSender::SendReport()
 
 	// Done
     m_nStatus = status;
-    m_Assync.SetCompleted(status);  
+    m_Assync.SetCompleted(status);
+	m_httpResponse = m_Assync.GetHttpResponse();
     return status==0?TRUE:FALSE;
 }
 
@@ -1943,6 +1947,9 @@ BOOL CErrorReportSender::SendOverHTTP()
 	request.m_aTextFields[_T("exceptionmodulebase")] = strconv.t2utf8(sNum);
 	sNum.Format(_T("%I64u"), eri->GetExceptionAddress());
 	request.m_aTextFields[_T("exceptionaddress")] = strconv.t2utf8(sNum);
+	
+	for (const auto & keyValue : m_additionalHttp)
+		request.m_aTextFields[keyValue.first.c_str()] = keyValue.second;
 
 	// Add an MD5 hash of file attachment
     CString sMD5Hash;

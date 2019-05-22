@@ -247,6 +247,7 @@ BOOL CHttpRequestSender::InternalSend()
 		InternetReadFile(hRequest, pBuffer, 4095, &dwBuffSize);
 		pBuffer[dwBuffSize] = 0;
 		sMsg = CString((LPCSTR)pBuffer, dwBuffSize);
+		m_Assync->SetHttpResponse(std::string((const char*)pBuffer, dwBuffSize));
 		sMsg = _T("Server response body:")  + sMsg;
 		m_Assync->SetProgress(sMsg, 0);
 	

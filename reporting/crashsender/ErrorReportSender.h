@@ -136,6 +136,12 @@ public:
 	static int TerminateAllCrashSenderProcesses();
 	
 	void AddFile(UserFile filename) { m_additionalFiles.emplace_back(std::move(filename)); }
+	
+	void AddXmlParam(const std::wstring & key, const std::wstring & value) { m_additionalParams[key] = value; }
+	
+	void AddHttpParam(const std::string & key, const std::string & value) { m_additionalHttp[key] = value; }
+	
+	const std::string & GetHttpResponse() const { return m_httpResponse; }
 		
 private:
 
@@ -232,7 +238,10 @@ private:
     BOOL m_bSendingNow;                 // TRUE if in progress of sending reports.
 	BOOL m_bErrors;                     // TRUE if there were errors.
 	CString m_sCrashLogFile;            // Log file.
+	std::string m_httpResponse;
 	std::vector<UserFile> m_additionalFiles;
+	std::map<std::wstring, std::wstring> m_additionalParams;
+	std::map<std::string, std::string> m_additionalHttp;
 };
 
 

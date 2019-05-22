@@ -56,7 +56,10 @@ struct AssyncNotification
 
     // Notifies about feedback is ready to be received
     void FeedbackReady(int code);
+	
+	void SetHttpResponse(const std::string & data);
 
+	const std::string & GetHttpResponse() const;
 private:
 
     CComAutoCriticalSection m_cs; // Protects internal state
@@ -66,6 +69,7 @@ private:
     HANDLE m_hFeedbackEvent;      // Feedback event
     int m_nPercentCompleted;      // Percent completed
     std::vector<CString> m_statusLog; // Status log
+	std::string m_httpResponse;
 	CString m_sLogFile;
     FILE* m_fileLog;	
 };
